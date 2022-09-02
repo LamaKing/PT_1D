@@ -1,6 +1,8 @@
 # Prandtl-Tomlinson model
 
 Simple python implementation of the 1D Prandtl-Tomlinson model.
+This model is used to rationalise dry friction model and mechanical instabilities (https://en.wikipedia.org/wiki/Tomlinson_model).
+
 To see details of the model and references used for testing see:
 - Analytical expressions for the kinetic friction in the Prandtl-Tomlinson model Enrico Gnecco, Raphael Roth, and Alexis Baratoff Phys. Rev. B 86, 035443 (2012)
 - Velocity dependence of kinetic friction in the Prandtl-Tomlinson model Martin H. Müser Phys. Rev. B 84, 125419 (2011)
