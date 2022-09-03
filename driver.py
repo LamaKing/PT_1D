@@ -8,7 +8,6 @@ from RK45_lang import RK45_lang
 # Module implementing the equation of motion
 from PT_1D import derivs, sub_en, spring_en
 
-
 def drive(params):
 
     # Start the clock
@@ -23,7 +22,11 @@ def drive(params):
     if 'name' in params.keys(): name = params['name']
 
     # Init system
-    xvec, vvec, mvec = np.zeros(1), np.zeros(1), np.ones(1)
+    x0, v0, tip0 = 0, 0, 0
+    if 'x0' in params.keys(): x0 = params['x0']
+    if 'v0' in params.keys(): v0 = params['v0']
+    if 'tip0' in params.keys(): tip0 = params['tip0']
+    xvec, vvec, mvec = x0*np.ones(1), v0*np.ones(1), params['m']*np.ones(1)
     Np = len(xvec)
     # MD integration params
     dt = params['dt'] # time-step
@@ -35,24 +38,26 @@ def drive(params):
 
     # Substrate potential
     a, U0 = params['a'], params['U0']
-    # Analytic function
-    #print("Analytic function of standard PT")
-    #def Us(x):
-    #    return -U0*np.cos(2*pi*x/a)
-    #def Fs(x):
-    #    return -2*pi*U0/a*np.sin(2*pi*x/a)
-    # Fitted function
-    # !!! NORMALISED and SINGLE PERIOD: we add U0 here and wrap according to spacing a
-    print("Fitted function")
-    #submod_fname = 'sub-std'
-    submod_fname = 'sub-stdfit'
-    submod = importlib.import_module(submod_fname)
-    fen, ff = submod.fen, submod.ff
-    def Us(x):
-        return U0*fen(x%a)
-
-    def Fs(x):
-        return U0*(ff(x%a))
+    if 'submod_fname' in params.keys():
+        # --- Fitted function ---
+        # !!! NORMALISED and SINGLE PERIOD: we add U0 here and wrap according to spacing a
+        #submod_fname = 'sub-stdfit'
+        #submod_fname = 'sub-circfit'
+        submod_fname = params['submod_fname']
+        print("Fitted function from", submod_fname)
+        submod = importlib.import_module(submod_fname)
+        fen, ff = submod.fen, submod.ff
+        def Us(x):
+            return U0*fen(x%a)
+        def Fs(x):
+            return U0*(ff(x%a))
+    else:
+        # --- Analytic function ---
+        print("Analytic function of standard PT")
+        def Us(x):
+            return -U0*np.cos(2*pi*x/a)
+        def Fs(x):
+            return -2*pi*U0/a*np.sin(2*pi*x/a)
 
     # Langevin thermostat
     gamma, T = params['gamma'], params['T'] # [gamma]=???, [T]=energy
@@ -60,7 +65,7 @@ def drive(params):
     brand = corr*np.sqrt(2*T*gamma/dt)
 
     # Parameters for the PT module
-    dparams = {'v_dummy': v_dummy, 'K': K,
+    dparams = {'v_dummy': v_dummy, 'K': K, 'tip0': tip0,
                'Fs': Fs, 'Us': Us,
                'gamma': gamma, 'brand': brand
                }
@@ -72,8 +77,9 @@ def drive(params):
 
     # ------------------- PRINT SYSTEM INFO -------------------- #
     header = ' SYSTEM INFO '
-    print('-'*20 + header + '-'*20)
     eta = ((2*pi)**2*U0)/(K*a**2) # Smooth sliding or stick-slip?
+    print('-'*20 + header + '-'*20)
+    print('Tip moving to v*t_end=%.4g (%.4g periodes)' % (dt*nstep*v_dummy, (dt*nstep*v_dummy)/a))
     print('Standard PT eta=%6.3g. ' % eta, "Sliding is %s" % ('smooth' if eta<1 else 'stick-slip'))
     print('Damping gamma=%6.3g. ' % gamma, "Dynamics is %s-damped?" % ('over' if gamma>=1 else 'under'))
     print('-'*20 + '-'*len(header) + '-'*20)
@@ -101,14 +107,6 @@ def drive(params):
     #### INIT
     t, tf = 0, dt*nstep
     it = 0
-    # Save FIRST STEP
-    c_sub_en, c_spring_en, c_ekin = np.sum(sub_en(t, xvec, dparams)), np.sum(spring_en(t, xvec, dparams)), np.sum(1/2*vvec**2)
-    c_kBT = 2*c_ekin/Np
-    xcm, vcm = np.average(xvec), np.average(vvec)
-
-    print(status_str % (it, t, t/tf*100, xcm, xcm/2/pi, vcm , c_kBT, c_sub_en+c_spring_en+c_ekin))
-    print_status([t, c_sub_en, c_spring_en, c_ekin, c_kBT, xcm, vcm])
-
     # Solve equations with RK45 FIX STEP for Langevin. See module here and SciPy.
     # Wrap parameters (should not change from now on...) for the solver
     fun = lambda t, y: derivs(t, y, dparams)
@@ -116,31 +114,37 @@ def drive(params):
     solver.set_step(dt) # Set FIXED time step of intergration
     solver.set_nskip(nskip) # Set number of step done inside the function, not printed
 
+    # Save FIRST STEP
+    c_sub_en, c_spring_en, c_ekin = np.sum(sub_en(t, xvec, dparams)), np.sum(spring_en(t, xvec, dparams)), np.sum(1/2*vvec**2)
+    c_kBT = 2*c_ekin/Np
+    xcm, vcm = np.average(xvec), np.average(vvec)
+    print(status_str % (it, t, t/tf*100, xcm, xcm/2/pi, vcm , c_kBT, c_sub_en+c_spring_en+c_ekin))
+    print_status([t, c_sub_en, c_spring_en, c_ekin, c_kBT, xcm, vcm])
+
+    ##### TIME LOOP --------------------------
     while t<tf:
         solver.step() # Advance one step
         eqvec = solver.y # get updated solution
         t = solver.t # set new time in solver
 
-        # Save results
+        # Save step
         xvec, vvec = eqvec[:neq2], eqvec[neq2:]
         c_sub_en, c_spring_en, c_ekin = np.sum(sub_en(t, xvec, dparams)), np.sum(spring_en(t, xvec, dparams)), np.sum(1/2*vvec**2)
         c_kBT = 2*c_ekin/Np
         xcm, vcm = np.average(xvec), np.average(vvec)
-
         print_status([t, c_sub_en, c_spring_en, c_ekin, c_kBT, xcm, vcm])
 
         # Print status update
         if it % int(nstep/nskip/10+1) == 0:
             print(status_str % (it, t, t/tf*100, xcm, xcm/2/pi, vcm , c_kBT, c_sub_en+c_spring_en+c_ekin))
         it+=1
-    #-------------------------------------------------------
+    ##### ------------------------------------
 
     # Save LAST STEP
     xvec, vvec = eqvec[:neq2], eqvec[neq2:]
     c_sub_en, c_spring_en, c_ekin = np.sum(sub_en(t, xvec, dparams)), np.sum(spring_en(t, xvec, dparams)), np.sum(1/2*vvec**2)
     c_kBT = 2*c_ekin/Np
     xcm, vcm = np.average(xvec), np.average(vvec)
-
     print(status_str % (it, t, t/tf*100, xcm, xcm/2/pi, vcm , c_kBT, c_sub_en+c_spring_en+c_ekin))
     print_status([t, c_sub_en, c_spring_en, c_ekin, c_kBT, xcm, vcm])
 
@@ -154,6 +158,5 @@ def drive(params):
 if __name__ == "__main__":
     # Read params
     params_fname = sys.argv[1]
-    with open(params_fname, 'r') as inj:
-        params = json.load(inj)
+    with open(params_fname, 'r') as inj: params = json.load(inj)
     drive(params)

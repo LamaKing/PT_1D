@@ -8,7 +8,7 @@ t_eps = 1 # Set to 0: turn off the substrate potential for debug purposes
 def derivs(t, y, params): # here is all the physics: the left side of the equation
 
     Fs = params['Fs'] # Substrate force function of form f(x), x position of tip
-    v_dummy, K = params['v_dummy'], params['K'] # Moving stage
+    v_dummy, K, tip0 = params['v_dummy'], params['K'], params['tip0'] # Moving stage
     gamma, brand = params['gamma'], params['brand'] # Thermostat
 
     # Initialise arrays
@@ -24,7 +24,7 @@ def derivs(t, y, params): # here is all the physics: the left side of the equati
     #### VELOCITIES DOT ####
     #------- Chain bulk
     for i in range(0, neq2):
-        deriv[i+neq2] =  t_eps*Fs(y[i]) - K*(y[i]-v_dummy*t) - gamma*y[i+neq2] + brand*noise[i]
+        deriv[i+neq2] =  t_eps*Fs(y[i]) - K*(y[i]-(v_dummy*t+tip0)) - gamma*y[i+neq2] + brand*noise[i]
     return deriv
 
 def sub_en(t, y, params):

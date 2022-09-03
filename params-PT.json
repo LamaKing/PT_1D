@@ -8,5 +8,8 @@
     "nskip": 200,
     "gamma": 1.5,
     "T": 0.0,
-    "m": 1.0
+    "m": 1.0,
+    "submod_fname": "sub-circfit",
+    "x0":   0,
+    "tip0": 0
 }
