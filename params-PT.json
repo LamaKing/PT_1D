@@ -4,12 +4,12 @@
     "a": 6.283185307179586,
     "U0": 1,
     "v_dummy": 0.01,
-    "nstep": 400000,
+    "nstep": 80000,
     "nskip": 200,
     "gamma": 1.5,
     "T": 0.0,
     "m": 1.0,
-    "submod_fname": "sub-circfit",
+    "submod_fname": "sub-stdfit",
     "x0":   0,
     "tip0": 0
 }
