@@ -14,10 +14,10 @@ def drive(params):
     t0 = time()
 
     # Read parameters
-    print("Params file")
+    print('-'*10, "Params file", '-'*5)
     for k, v in params.items():
         print("%20s :" % k, v)
-
+    print('-'*(10+1+len("Params file")+1+5))
     name = '' # Not usually needed, use folders
     if 'name' in params.keys(): name = params['name']
 
