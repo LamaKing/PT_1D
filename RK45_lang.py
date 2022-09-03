@@ -5,8 +5,7 @@ import numpy as np
 class RK45_lang(RK45):
     """ Solve RK with fixed time step. Needed when using random number generators
 
-    Use nskip to do internally some steps instead of keep calling the function.
-    """
+    Use nskip to do internally some steps instead of keep calling the function."""
 
     def set_nskip(self, nskip):
         self.ncalls = 0
