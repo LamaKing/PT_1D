@@ -78,8 +78,9 @@ def drive(params):
     # ------------------- PRINT SYSTEM INFO -------------------- #
     header = ' SYSTEM INFO '
     eta = ((2*pi)**2*U0)/(K*a**2) # Smooth sliding or stick-slip?
+    dx = dt*nstep*v_dummy
     print('-'*20 + header + '-'*20)
-    print('Tip moving to v*t_end=%.4g (%.4g periodes)' % (dt*nstep*v_dummy, (dt*nstep*v_dummy)/a))
+    print('Tip moving from t0=%.4g to t0+v*t_end=%.6g (v*t=%.4g, %.4g periodes)' % (tip0, tip0+dx, dx, (dx)/a))
     print('Standard PT eta=%6.3g. ' % eta, "Sliding is %s" % ('smooth' if eta<1 else 'stick-slip'))
     print('Damping gamma=%6.3g. ' % gamma, "Dynamics is %s-damped?" % ('over' if gamma>=1 else 'under'))
     print('-'*20 + '-'*len(header) + '-'*20)
