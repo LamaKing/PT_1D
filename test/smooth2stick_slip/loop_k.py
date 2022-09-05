@@ -7,6 +7,24 @@ import sys
 
 import numpy as np
 
+def handle_run(params, c_key, c_val):
+    params[c_key] = c_val
+    pwd =  os.environ['PWD']
+    print('Working in ', pwd)
+
+    # Run PT model
+    drive(params)
+
+    # Organise run data in sub-folder
+    cdir = '%s_%.4g' % (c_key, c_val)
+    os.makedirs(cdir, exist_ok=True)
+    # Move output files in run folder
+    move_fname = ['out.dat']
+    for cfname in move_fname:
+        shutil.move(pjoin(pwd, cfname), pjoin(pwd, cdir, cfname))
+    # Copy input in folder
+    with open(pjoin(pwd, cdir, 'params.json'), 'w') as outj:
+        json.dump(params, outj)
 
 def k_loop(k0, k1, dk, params):
     """ Loop over values of spring constant K form k0 to k1 in steps dk
@@ -22,20 +40,8 @@ def k_loop(k0, k1, dk, params):
     move_fname = ['out.dat']
 
     for k in np.arange(k0, k1, dk):
-
-        print('--------- ON k=%15.8g -----------' % k)
-        params['K'] = float(k)
-        drive(params) # Run PT model
-
-        # Organise run data in sub-folder
-        cdir = 'K_%.4g' % k
-        os.makedirs(cdir, exist_ok=True)
-        # Move output files in run folder
-        for cfname in move_fname:
-            shutil.move(pjoin(pwd, cfname), pjoin(pwd, cdir, cfname))
-        # Copy input in folder
-        with open(pjoin(pwd, cdir, 'params.json'), 'w') as outj:
-            json.dump(params, outj)
+        print('--------- ON K=%15.8g -----------' % k)
+        handle_run(params, 'K', float(k)) # for json cannot be numpy
         print('-' * 80, '\n')
 
     t1=time()
